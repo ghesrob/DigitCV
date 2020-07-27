@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 import keras
 from keras import layers, backend
 from keras.models import Sequential
@@ -7,11 +8,10 @@ from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 
 def load_mnist():
-    """ Chargement et pré-processing de MNIST.
+    """Chargement et pré-processing de MNIST.
     MNIST est un dataset contenant 70.000 images de chiffres manuscrits.
     Cette fonction charge le dataset à partir d'AWS, et le prépare pour 
     l'entrainement d'un modèle.
-
     :output : les bases d'apprentissage et de test sous la forme d'arrays numpy, ainsi
     que les dimensions d'une image.
     """
@@ -35,7 +35,7 @@ def load_mnist():
         X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
         input_shape = (28, 28, 1)
 
-    # Normalisation des données
+    # Normalisation des images
     X_train = X_train.astype("float32") / 255
     X_test = X_test.astype("float32") / 255
 
@@ -50,14 +50,15 @@ def load_mnist():
     return (X_train, y_train), (X_test, y_test), input_shape
 
 
-def build_model(X_train, y_train, X_test, y_test, input_shape, batch_size = 128, epochs = 1):
-    """Crée, entraine et retourne un CNN pour la prédiction de chiffres manuscrits.
-    L'architecture du réseau consiste en deux couches de convolution, suivies d'une couche de 
-    pooling et de deux couches denses, entrecoupées de dropout. 
+def create_model(input_shape):
+    """Créeation d'un CNN et d'un générateur de données augmentées.
+    L'architecture du réseau consiste en un bloc de convolution composé de deux couches de convolution
+    suivies d'une couche de pooling puis d'un bloc MLP composé de deux couches denses.
     L'output du réseau est un array sparse avec un seul 1, dont l'index est la classe prédite.
-
-    :output : le modèle entrainé.
+    :input : un array contenant les dimensions d'une image
+    :output : le modèle compilé et un générateur de données augmentées.
     """
+    # Architecture du modèle
     model = Sequential([
         layers.Conv2D(32, kernel_size=(3,3), activation="relu", input_shape=input_shape),
         layers.Conv2D(64, kernel_size=(3,3), activation="relu"),
@@ -68,8 +69,13 @@ def build_model(X_train, y_train, X_test, y_test, input_shape, batch_size = 128,
         layers.Dropout(0.5),
         layers.Dense(10, activation="softmax")
     ])
-
-    # Augmentation de données
+    # Compilation du modèle
+    model.compile(
+        loss=keras.losses.categorical_crossentropy,
+        optimizer=keras.optimizers.Adadelta(),
+        metrics=['accuracy']
+    )
+    # Générateur de données augmentées
     datagen = ImageDataGenerator(
         rotation_range=10,
         width_shift_range=0.1,
@@ -79,31 +85,32 @@ def build_model(X_train, y_train, X_test, y_test, input_shape, batch_size = 128,
         fill_mode='nearest'
     )
 
-    model.compile(
-        loss=keras.losses.categorical_crossentropy,
-        optimizer=keras.optimizers.Adadelta(),
-        metrics=['accuracy']
-    )
-
-    # Entrainement du modèle sur données augmentées
-    model.fit_generator(
-        datagen.flow(X_train, y_train, batch_size=batch_size),
-        epochs=epochs,
-        verbose=1,
-        validation_data=(X_test, y_test),
-        steps_per_epoch=X_train.shape[0] // batch_size
-    )
-
-    return model
+    return (model, datagen)
 
 
 if __name__=="__main__":
+    parser = ArgumentParser()
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--epochs', type=int, default=15)
+    options = parser.parse_args()
+
     (X_train, y_train), (X_test, y_test), input_shape = load_mnist()
-    model = build_model(X_train, y_train, X_test, y_test, input_shape)
+    model, datagen = create_model(input_shape)
+
+    # Entrainement du modèle sur données augmentées
+    model.fit_generator(
+        datagen.flow(X_train, y_train, batch_size=options.batch_size),
+        epochs=options.epochs,
+        verbose=1,
+        validation_data=(X_test, y_test),
+        steps_per_epoch=X_train.shape[0] // options.batch_size
+    )
+
     # Evaluation du modèle
     score = model.evaluate(X_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
+
     # Sauvegarde du modèle
     model.save("model/model.h5")
     print("Modèle sauvegardé sous model/model.h5")
