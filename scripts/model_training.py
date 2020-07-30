@@ -51,7 +51,7 @@ def load_mnist():
 
 
 def create_model(input_shape):
-    """Créeation d'un CNN et d'un générateur de données augmentées.
+    """Création d'un CNN et d'un générateur de données augmentées.
     L'architecture du réseau consiste en un bloc de convolution composé de deux couches de convolution
     suivies d'une couche de pooling puis d'un bloc MLP composé de deux couches denses.
     L'output du réseau est un array sparse avec un seul 1, dont l'index est la classe prédite.
@@ -92,8 +92,10 @@ if __name__=="__main__":
     parser = ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=15)
+    parser.add_argument("--name", type=str, default="model_0")
     options = parser.parse_args()
 
+    # Chargement des données et création du modèle pour entrainement
     (X_train, y_train), (X_test, y_test), input_shape = load_mnist()
     model, datagen = create_model(input_shape)
 
@@ -106,12 +108,11 @@ if __name__=="__main__":
         steps_per_epoch=X_train.shape[0] // options.batch_size
     )
 
-    # Evaluation du modèle
+    # Evaluation et sauvegarde du modèle
     score = model.evaluate(X_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
-
-    # Sauvegarde du modèle
-    model.save("model/model.h5")
-    print("Modèle sauvegardé sous model/model.h5")
+    path = f"../model/{options.name}.h5"
+    model.save(path)
+    print("Modèle sauvegardé sous " + path)
     
