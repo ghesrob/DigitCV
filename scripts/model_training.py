@@ -1,21 +1,20 @@
 from argparse import ArgumentParser
-import keras
-from keras import layers, backend
-from keras.models import Sequential
-from keras.utils import to_categorical
-from keras.utils.data_utils import get_file
-from keras.preprocessing.image import ImageDataGenerator
+
 import numpy as np
+from tensorflow.keras import layers, backend
+from tensorflow.keras.losses import categorical_crossentropy
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adadelta
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.utils import to_categorical, get_file
+
 
 def load_mnist():
-    """Chargement et pré-processing de MNIST.
-    MNIST est un dataset contenant 70.000 images de chiffres manuscrits.
-    Cette fonction charge le dataset à partir d'AWS, et le prépare pour 
-    l'entrainement d'un modèle.
-    :output : les bases d'apprentissage et de test sous la forme d'arrays numpy, ainsi
-    que les dimensions d'une image.
+    """Loading and preprocessing of the MNIST Dataset.
+    MNIST is a large dataset of handwritten digits.
+    This function load MNIST from AWS, and preprocess it for training a model.
     """
-    # Chargement du dataset
+    # Dataset loading
     path = get_file(
         fname="mnist.npz",
         origin='https://s3.amazonaws.com/img-datasets/mnist.npz',
@@ -25,7 +24,7 @@ def load_mnist():
         X_train, y_train = file['x_train'], file['y_train']
         X_test, y_test = file['x_test'], file['y_test']
 
-    # Reshaping des données selon le format d'image du système
+    # Data reshaping according to user's system image data format
     if backend.image_data_format() == 'channels_first':
         X_train = X_train.reshape(X_train.shape[0], 1, 28, 28)
         X_test = X_test.reshape(X_test.shape[0], 1, 28, 28)
@@ -35,15 +34,15 @@ def load_mnist():
         X_test = X_test.reshape(X_test.shape[0], 28, 28, 1)
         input_shape = (28, 28, 1)
 
-    # Normalisation des images
+    # Normalization
     X_train = X_train.astype("float32") / 255
     X_test = X_test.astype("float32") / 255
-
-    # One-hot-encoding des classes
-    y_train = keras.utils.to_categorical(y_train, 10)
-    y_test = keras.utils.to_categorical(y_test, 10)
-
-    # Sortie
+    #X_train = (X_train > 0).astype("int")
+    #X_test = (X_test > 0).astype("int")
+    # One-hot-encoding 
+    y_train = to_categorical(y_train, 10)
+    y_test = to_categorical(y_test, 10)
+    # Output
     print('X_train shape:', X_train.shape)
     print(X_train.shape[0], 'train samples')
     print(X_test.shape[0], 'test samples')
@@ -51,14 +50,11 @@ def load_mnist():
 
 
 def create_model(input_shape):
-    """Création d'un CNN et d'un générateur de données augmentées.
-    L'architecture du réseau consiste en un bloc de convolution composé de deux couches de convolution
-    suivies d'une couche de pooling puis d'un bloc MLP composé de deux couches denses.
-    L'output du réseau est un array sparse avec un seul 1, dont l'index est la classe prédite.
-    :input : un array contenant les dimensions d'une image
-    :output : le modèle compilé et un générateur de données augmentées.
+    """Create a convolutional neural network and an image data generator.
+    Build and compile a sequential CNN for handwritten digits recognition. The returned CNN is ready for training.
+    Also create an image data generator to train the model on.
     """
-    # Architecture du modèle
+    # Model building
     model = Sequential([
         layers.Conv2D(32, kernel_size=(3,3), activation="relu", input_shape=input_shape),
         layers.Conv2D(64, kernel_size=(3,3), activation="relu"),
@@ -69,13 +65,13 @@ def create_model(input_shape):
         layers.Dropout(0.5),
         layers.Dense(10, activation="softmax")
     ])
-    # Compilation du modèle
+    # Model compilation
     model.compile(
-        loss=keras.losses.categorical_crossentropy,
-        optimizer=keras.optimizers.Adadelta(),
+        loss=categorical_crossentropy,
+        optimizer=Adadelta(),
         metrics=['accuracy']
     )
-    # Générateur de données augmentées
+    # Image data generator
     datagen = ImageDataGenerator(
         rotation_range=10,
         width_shift_range=0.1,
@@ -92,15 +88,15 @@ if __name__=="__main__":
     parser = ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=15)
-    parser.add_argument("--name", type=str, default="model_0")
+    parser.add_argument("--name", type=str, default="model")
     options = parser.parse_args()
 
-    # Chargement des données et création du modèle pour entrainement
+    # Data loading and model creation
     (X_train, y_train), (X_test, y_test), input_shape = load_mnist()
     model, datagen = create_model(input_shape)
 
-    # Entrainement du modèle sur données augmentées
-    model.fit_generator(
+    # Model training, using augmented data
+    model.fit(
         datagen.flow(X_train, y_train, batch_size=options.batch_size),
         epochs=options.epochs,
         verbose=1,
@@ -108,11 +104,11 @@ if __name__=="__main__":
         steps_per_epoch=X_train.shape[0] // options.batch_size
     )
 
-    # Evaluation et sauvegarde du modèle
+    # Evaluation and saving as .h5 file
     score = model.evaluate(X_test, y_test, verbose=0)
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
-    path = f"../model/{options.name}.h5"
+    path = f"models/{options.name}.h5"
     model.save(path)
-    print("Modèle sauvegardé sous " + path)
+    print("Model saved as " + path)
     
