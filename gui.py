@@ -3,7 +3,6 @@ import numpy as np
 from PIL import ImageGrab
 from tensorflow.keras.models import load_model
 import tkinter as tk
-from tkinter import ttk
 
 from gui_settings import *
 
@@ -13,20 +12,31 @@ class DigitGui:
         # Settings
         self.model = model
         self.root = root
-        self.root.title("Digits-CV")
-        self.root.iconbitmap("images/main.ico")
-        self.root.geometry("600x700")
+        self.root.title("DigitCV")
+        self.root.iconbitmap("images/app_icon.ico")
+        self.root.geometry("600x800")
         self.root.resizable(0,0)
+        self.root.configure(background=background)
         # GUI initialization
         self.create_widgets()
         self.ready = True
 
     def create_widgets(self):
         """Define the app layout."""
+        # Header bar
+        self.header = tk.Canvas(self.root, width=600, height=80, bg=color1, highlightthickness=0)
+        self.header.place(x=0, y=0)
+        self.header_image = tk.PhotoImage(file="images/logo70.png")
+        self.header.create_image(50,40, image=self.header_image, anchor=tk.CENTER)
+        #self.header.create_image(15,5, image=self.header_image, anchor=tk.NW)
+        self.header_title = tk.Label(self.header, text="DigitCV", font=title_font, bg=color1, fg=color2)
+        self.header_title.place(x=100, y=5, anchor=tk.NW)
+        self.header_text = tk.Label(self.header, text="Handwritten digits recognition", font=myfont, bg=color1, fg=white)
+        self.header_text.place(x=100, y=70, anchor=tk.SW)
         # Box around drawing surface
         self.box = tk.Canvas(self.root, width=504, height=537, bg=color1, highlightthickness=0)
-        self.box.place(x=48, y=48)
-        self.box_title = tk.Label(self.box, text='Draw some digits to recognize',font=myfont, bg=color1, fg=white)
+        self.box.place(x=48, y=130)
+        self.box_title = tk.Label(self.box, text='Draw some digits',font=myfont, bg=color1, fg=white)
         self.box_title.place(x=2, y=5)
         # Drawing surface
         self.cv = tk.Canvas(self.box, width=500, height=500, bg=white, highlightthickness=0)
@@ -35,13 +45,13 @@ class DigitGui:
         self.cv.bind("<B1-Motion>", self.paint_lines)
         # Predict button
         self.btn_predict2 = tk.Label(self.root, text='Predict',font=myfont, height=2, width=13, bg=color1, fg=white)
-        self.btn_predict2.place(relx=0.3, y=630, anchor=tk.CENTER)
+        self.btn_predict2.place(relx=0.3, y=730, anchor=tk.CENTER)
         self.btn_predict2.bind("<Enter>", lambda event: self.btn_predict2.configure(fg=color2))
         self.btn_predict2.bind("<Leave>", lambda event: self.btn_predict2.configure(fg=white))
         self.btn_predict2.bind("<Button-1>", self.predict)
         # Reset button
         self.btn_reset2 = tk.Label(self.root, text='Reset',font=myfont, height=2, width=13, bg=color1, fg=white)
-        self.btn_reset2.place(relx=0.7, y=630, anchor=tk.CENTER)
+        self.btn_reset2.place(relx=0.7, y=730, anchor=tk.CENTER)
         self.btn_reset2.bind("<Enter>", lambda event: self.btn_reset2.configure(fg=color2))
         self.btn_reset2.bind("<Leave>", lambda event: self.btn_reset2.configure(fg=white))
         self.btn_reset2.bind("<Button-1>", self.reset)
@@ -79,10 +89,8 @@ class DigitGui:
 
     def save_drawing(self, filename):
         """Cropping of canvas's paiting and saving as a png file"""
-        x_start = root.winfo_rootx() + self.cv.winfo_x()
-        y_start = root.winfo_rooty() + self.cv.winfo_y()
-        x_end = x_start + self.cv.winfo_width()
-        y_end = y_start + self.cv.winfo_height()
+        x_start, y_start = self.cv.winfo_rootx(), self.cv.winfo_rooty() 
+        x_end, y_end = x_start + self.cv.winfo_width(), y_start + self.cv.winfo_height()
         drawing = ImageGrab.grab().crop((x_start, y_start, x_end, y_end))
         drawing.save(filename)
 
@@ -123,7 +131,7 @@ class DigitGui:
         # Print result image on screen
         cv2.imwrite(filename, image)
         self.result = tk.PhotoImage(file = filename)
-        self.cv.create_image(-48, -48, image=self.result, anchor=tk.NW)
+        self.cv.create_image(0, 0, image=self.result, anchor=tk.NW)
         self.ready = False
 
 
