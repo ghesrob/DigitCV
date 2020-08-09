@@ -12,7 +12,7 @@ from tensorflow.keras.utils import to_categorical, get_file
 def load_mnist():
     """Loading and preprocessing of the MNIST Dataset.
     MNIST is a large dataset of handwritten digits.
-    This function load MNIST from AWS, and preprocess it for training a model.
+    This function load MNIST from AWS, and preprocess it for model training.
     """
     # Dataset loading
     path = get_file(
@@ -37,8 +37,6 @@ def load_mnist():
     # Normalization
     X_train = X_train.astype("float32") / 255
     X_test = X_test.astype("float32") / 255
-    #X_train = (X_train > 0).astype("int")
-    #X_test = (X_test > 0).astype("int")
     # One-hot-encoding 
     y_train = to_categorical(y_train, 10)
     y_test = to_categorical(y_test, 10)
@@ -80,7 +78,6 @@ def create_model(input_shape):
         zoom_range=0.1,
         fill_mode='nearest'
     )
-
     return (model, datagen)
 
 
@@ -95,7 +92,7 @@ if __name__=="__main__":
     (X_train, y_train), (X_test, y_test), input_shape = load_mnist()
     model, datagen = create_model(input_shape)
 
-    # Model training, using augmented data
+    # Model training over augmented data
     model.fit(
         datagen.flow(X_train, y_train, batch_size=options.batch_size),
         epochs=options.epochs,
