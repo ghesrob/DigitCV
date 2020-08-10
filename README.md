@@ -29,7 +29,7 @@ git clone https://github.com/ghesrob/DigitCV.git
 cd DigitCV
 python3 -m venv venv
 source venv/bin/activate
-pip3 install requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ## Usage
