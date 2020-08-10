@@ -12,6 +12,8 @@ Installation within a virtual environment using `venv`. Requires Python version 
 
 
 ### Windows
+
+Open a command prompt or Powershell and execute the following commands:
 ```
 git clone https://github.com/ghesrob/DigitCV.git
 cd DigitCV
@@ -21,6 +23,7 @@ pip install -r requirements.txt
 ```
 
 ### Linux
+Open a terminal and execute the following commands:
 ```
 git clone https://github.com/ghesrob/DigitCV.git
 cd DigitCV
